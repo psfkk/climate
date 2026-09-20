@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>내가 찍은 탄소발자국</title>
+<style>
+  :root{
+    --leaf:#639922; --leaf-dark:#173404; --leaf-mid:#3B6D11;
+    --leaf-pale:#EAF3DE; --leaf-line:#97C459;
+    --lemon:#FAEEDA; --lemon-line:#EF9F27; --lemon-dark:#633806;
+    --smoke:#F0997B; --smoke-dark:#993C1D; --smoke-pale:#FAECE7;
+    --ink:#20301A; --muted:#5F6B57; --white:#ffffff;
+    box-sizing:border-box;
+  }
+  *,*::before,*::after{box-sizing:inherit;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--leaf-pale);
+    color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    font-size:17px; line-height:1.7;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:16px 14px 40px;}
+  .card{background:var(--white); border-radius:16px; padding:18px 16px;}
+  h1{font-size:22px; font-weight:700; margin:0 0 6px; color:var(--leaf-dark);}
+  p{margin:0 0 10px;}
+  .center{text-align:center;}
+  .muted{color:var(--muted); font-size:14px;}
+  .tiny{color:var(--muted); font-size:13px; line-height:1.6;}
+
+  .bars{display:flex; gap:4px; margin-bottom:16px;}
+  .bar{flex:1; height:7px; border-radius:4px; background:#C0DD97;}
+  .bar.on{background:var(--leaf);}
+
+  .row{display:flex; gap:9px; margin-bottom:14px; align-items:flex-start;}
+  .row.me{justify-content:flex-end;}
+  .bubble{background:var(--white); border-radius:14px; padding:12px 14px; max-width:84%;}
+  .bubble.me{background:var(--leaf); color:var(--white);}
+  .avatar{flex:0 0 46px;}
+
+  button{font:inherit; color:inherit;}
+  .opt{
+    display:block; width:100%; text-align:left; margin-bottom:9px;
+    background:var(--white); border:1.5px solid var(--leaf-line);
+    border-radius:16px; padding:15px 16px; font-size:16px; line-height:1.55;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .opt:active{background:var(--leaf-pale);}
+  .opt:focus-visible{outline:3px solid var(--leaf-dark); outline-offset:2px;}
+
+  .go{
+    display:block; width:100%; background:var(--leaf-dark); color:var(--leaf-pale);
+    border:none; border-radius:26px; padding:15px 0; font-size:17px; font-weight:700;
+    cursor:pointer; margin-top:6px;
+  }
+  .go:active{background:var(--leaf-mid);}
+  .go:focus-visible{outline:3px solid var(--leaf); outline-offset:2px;}
+
+  textarea{
+    width:100%; min-height:96px; border:1.5px dashed var(--leaf-line);
+    border-radius:14px; padding:12px; font:inherit; font-size:16px;
+    background:var(--white); resize:vertical;
+  }
+  textarea:focus{outline:3px solid var(--leaf); outline-offset:1px; border-style:solid;}
+  .err{color:#A32D2D; font-size:14px; margin:6px 0 0;}
+
+  .big{font-size:34px; font-weight:700; color:var(--smoke-dark); margin:2px 0 2px;}
+  .warn{
+    background:#FCEBEB; border:2px solid #E24B4A; border-radius:14px;
+    padding:14px; margin:14px 0;
+  }
+  .warn strong{display:block; color:#A32D2D; font-size:19px; line-height:1.55;}
+  .item{display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #EDEFE7; font-size:15px;}
+  .item:last-child{border-bottom:none;}
+  .g{color:var(--smoke-dark); white-space:nowrap;}
+  .g.zero{color:var(--leaf-mid);}
+  .scene{background:var(--lemon); border:1.5px solid var(--lemon-line); border-radius:14px; padding:14px; color:var(--lemon-dark);}
+  .hid{display:none;}
+  .back{
+    display:block; width:100%; background:transparent; color:var(--leaf-mid);
+    border:none; padding:12px 0 2px; font-size:15px; cursor:pointer; text-align:center;
+  }
+  .back:active{color:var(--leaf-dark);}
+  .opt.picked{background:var(--leaf-pale); border-width:3px;}
+  #sid{
+    width:150px; font-size:26px; text-align:center; padding:12px;
+    border:2px solid var(--leaf-line); border-radius:14px; margin:6px 0 2px;
+  }
+  #sid:focus{outline:3px solid var(--leaf); outline-offset:2px;}
+
+  @media (prefers-reduced-motion:no-preference){
+    .fill{transition:height 1.6s ease-out;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------- 사이다 요정 그림 ---------- */
+function fairy(size, mood){
+  var mouth = mood==="soft"
+    ? '<path d="M36 49 Q42 46 48 49" stroke="#173404" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
+    : '<path d="M36 50 Q42 56 48 50" stroke="#173404" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 84 84" aria-hidden="true">'
+    + '<ellipse cx="16" cy="38" rx="10" ry="14" fill="#C0DD97"/>'
+    + '<ellipse cx="68" cy="38" rx="10" ry="14" fill="#C0DD97"/>'
+    + '<circle cx="42" cy="42" r="26" fill="#639922"/>'
+    + '<path d="M42 20 l2.4 5 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" fill="#fff"/>'
+    + '<path d="M25 50 l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#fff"/>'
+    + '<path d="M59 52 l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z" fill="#fff"/>'
+    + '<circle cx="34" cy="40" r="3.4" fill="#173404"/><circle cx="50" cy="40" r="3.4" fill="#173404"/>'
+    + '<circle cx="27" cy="48" r="4.2" fill="#F0997B"/><circle cx="57" cy="48" r="4.2" fill="#F0997B"/>'
+    + mouth + '</svg>';
+}
+
+/* ---------- 아홉 장면 ---------- */
+var SCENES = [
+ { ask:"아침에 눈을 떴어. 방이 덥거나 추웠지? 어떻게 했어?",
+   opts:[
+    {t:"창문을 열어 둔 채로 에어컨이나 난방을 켰어", g:500, r:"창문이 열려 있으면 시원한 공기랑 따뜻한 공기가 밖으로 빠져나가. 그래서 기계가 더 오래, 더 세게 돌아가."},
+    {t:"창문은 닫고 에어컨이나 난방을 켰어", g:300, r:"창문을 닫으면 기계가 덜 힘들어. 그래도 켜 두는 동안은 전기를 계속 써."},
+    {t:"창문을 열고 선풍기를 틀거나 옷을 더 입었어", g:30, r:"바람이랑 옷은 전기를 거의 안 써. 선풍기는 에어컨보다 훨씬 적게 쓰고."},
+    {t:"그냥 참았어", g:0, r:"기계를 안 켜면 탄소는 안 나와. 많이 더우면 참지 말고 얘기해도 돼."}
+   ]},
+ { ask:"이제 씻고 학교 갈 준비를 해. 물은 어떻게 썼어?",
+   opts:[
+    {t:"양치하는 동안 물을 계속 틀어 놨어", g:200, r:"우리가 쓰는 물은 멀리서 관을 타고 오고, 쓴 물은 다시 깨끗하게 만들어야 해. 그 모든 일에 전기가 들어."},
+    {t:"세수할 때만 잠깐 틀었어", g:60, r:"필요할 때만 틀면 흘려보내는 물이 줄어."},
+    {t:"컵에 물을 받아서 양치했어", g:20, r:"컵 하나면 양치가 돼. 흘러가는 물이 거의 없어."}
+   ]},
+ { ask:"학교에 가는 길이야. 오늘은 어떻게 왔어?",
+   opts:[
+    {t:"부모님 차를 타고 왔어", g:400, r:"자동차는 기름을 태워서 움직여. 그때 탄소가 나와. 그럴 수밖에 없는 날도 있지."},
+    {t:"버스를 탔어", g:120, r:"버스도 기름을 쓰지만 여러 사람이 같이 타. 그래서 한 사람 몫은 줄어들어."},
+    {t:"걸어서 왔어", g:0, r:"걸을 때는 탄소가 안 나와. 몸도 깨어나고."}
+   ]},
+ { ask:"점심시간이야. 급식은 어떻게 했어?",
+   opts:[
+    {t:"많이 남기고 한꺼번에 버렸어", g:400, r:"남긴 음식은 기르고, 나르고, 만드는 데 쓴 것이 다 버려지는 거야. 버린 뒤에도 치우는 데 또 탄소가 들고."},
+    {t:"내 주먹 크기 정도로 조금만 남겼어", g:120, r:"조금이라도 남으면 그만큼은 버려져. 그래도 많이 남기는 것보다는 적게 버려지지."},
+    {t:"먹을 만큼만 받았기 때문에 국물까지 다 먹었어", g:0, r:"처음부터 먹을 만큼만 받으면 버려지는 게 없어. 기르고 나른 것이 하나도 안 버려진 거야."}
+   ]},
+ { ask:"체육 시간이야. 다 같이 교실을 나가는데 형광등이 켜져 있고 에어컨도 돌아가고 있어. 문도 열려 있어. 너는 어떻게 했어?",
+   opts:[
+    {t:"그냥 친구들을 따라 나갔어", g:250, r:"체육이 재밌어서 그랬구나. 그런데 아무도 없는 교실에서 불이랑 에어컨은 계속 돌아가고 있었어."},
+    {t:"봤지만 내가 끄기엔 좀 그래서 지나쳤어", g:250, r:"봤다는 게 중요해. 보고도 못 한 건 네 잘못이 아니야. 왜 하기 어려웠을까?"},
+    {t:"문만 닫고 나왔어", g:120, r:"문을 닫으면 시원한 공기가 덜 빠져나가. 에어컨이 그만큼 덜 힘들어."},
+    {t:"불을 끄고 문을 닫고 나왔어", g:20, r:"빈 교실에 불이 꺼졌어. 작아 보여도 매일 쌓여."},
+    {t:"친구들한테 \"불 끄자\" 하고 같이 껐어", g:0, r:"혼자 하는 것보다 같이 하면 다음에도 이어져. 이런 걸 약속이라고 해."}
+   ]},
+ { ask:"학원에 가는 길이야. 인형뽑기, 문방구, 오락실, PC방이 줄지어 보여. 오늘은 어떻게 했어?",
+   opts:[
+    {t:"인형뽑기를 여러 번 했어", g:150, r:"인형뽑기 기계도 하루 종일 전기를 써. 뽑은 인형을 만들고 나르는 데도 탄소가 들었고."},
+    {t:"오락실이나 PC방에 잠깐 들렀어", g:300, r:"게임기랑 컴퓨터가 한꺼번에 돌아가는 곳이야. 그 방을 시원하게 하는 데에도 전기를 써."},
+    {t:"문방구에서 집에 있는데 어디 뒀는지 몰라서 또 샀어", g:350, r:"물건은 만들 때 탄소가 가장 많이 나와. 이미 있는 걸 또 사면 그만큼 한 번 더 나온 거야."},
+    {t:"구경만 하고 그냥 지나쳤어", g:0, r:"지나친 것만으로도 새로 만들어질 것이 하나 줄었어."}
+   ]},
+ { ask:"학원이 끝났어. 배가 고파서 뭔가 먹고 싶어졌지. 어떻게 했어?",
+   opts:[
+    {t:"종이컵이나 플라스틱 컵에 든 음료를 사 마셨어", g:250, r:"한 번 쓰고 버리는 컵도 만들 때 탄소가 나와. 마시는 건 잠깐인데 만드는 건 그렇지 않아."},
+    {t:"포장해 와서 나무젓가락과 플라스틱 숟가락으로 먹고, 쓰레기는 한 통에 그냥 버렸어", g:350, r:"일회용 수저는 쓰고 나면 바로 쓰레기가 돼. 게다가 섞어서 버리면 다시 쓸 수 있는 것까지 못 쓰게 돼."},
+    {t:"포장해 와서 먹고, 쓰레기는 종류별로 나누어 버렸어", g:250, r:"나누어 버리면 플라스틱이나 종이를 다시 쓸 수 있어. 그래도 일회용을 쓴 만큼은 이미 나왔어."},
+    {t:"부모님이 싸 주신 간식을 먹었어", g:30, r:"집에서 가져온 간식은 포장이 거의 없지. 새로 만들어 버릴 것도 없고."},
+    {t:"텀블러에 담아 온 물이나 음료를 마셨어", g:0, r:"쓰던 텀블러를 다시 쓰면 새로 만들 게 없어."}
+   ]},
+ { ask:"학원 끝나고 노는 시간이야. 오늘은 뭐 하고 놀았어?",
+   opts:[
+    {t:"PC방에서 게임을 했어", g:600, r:"PC방은 컴퓨터가 수십 대 한꺼번에 돌아가. 그 방을 시원하게 하려고 에어컨도 세게 틀고."},
+    {t:"태블릿이나 휴대폰으로 영상을 오래 봤어", g:250, r:"영상은 네 태블릿만 전기를 쓰는 게 아니야. 저 멀리 있는 커다란 컴퓨터 창고에서 영상을 보내 주거든. 그 창고도 밤낮없이 돌아가."},
+    {t:"보지도 않으면서 텔레비전을 켜 놨어", g:200, r:"아무도 안 봐도 켜져 있으면 전기는 똑같이 써."},
+    {t:"인공지능한테 이것저것 물어보며 놀았어", g:250, r:"나 같은 인공지능한테 물어보면 저 멀리 있는 커다란 컴퓨터가 대신 생각을 해 줘. 그 컴퓨터는 전기를 아주 많이 먹는단다."},
+    {t:"밖에서 친구들이랑 놀았어", g:0, r:"햇빛이랑 바람은 전기를 안 써."}
+   ]},
+ { ask:"이제 잘 시간이야. 자기 전에 어떻게 했어?",
+   opts:[
+    {t:"방 불을 켜 둔 채 돌아다니다가 그냥 잤어", g:200, r:"아무도 없는 방에서도 전등은 똑같이 전기를 써."},
+    {t:"기계를 켜 둔 채로 잠들었어", g:180, r:"화면이 꺼져 있어도 켜져 있으면 전기가 흘러."},
+    {t:"불은 껐지만 기계는 켜 뒀어", g:100, r:"불을 끈 만큼은 줄었어. 기계는 아직 돌아가고 있고."},
+    {t:"불도 끄고 기계도 껐어", g:0, r:"안 쓰는 동안 꺼 두면 그만큼은 안 나와."}
+   ]}
+];
+
+/* ---------- 온도에 따라 보이는 장면 ---------- */
+function futureScene(finalTemp){
+  if(finalTemp < 1.40){
+    return ["지금과 비슷한 지구","여름이 길어지고 더운 날이 늘어나. 큰비가 한꺼번에 쏟아지는 곳이 있고, 비가 오래 오지 않아 논바닥이 갈라지는 곳도 있어."];
+  }
+  if(finalTemp < 1.50){
+    return ["1.5도에 가까워진 지구","산에 불이 더 자주, 더 크게 나. 태풍이 더 센 힘으로 올라와. 바닷속 산호가 하얗게 변해서 물고기들이 살 곳을 잃어."];
+  }
+  return ["1.5도를 넘어선 지구","산에 쌓인 눈이 빨리 녹아서 계곡으로 물이 한꺼번에 내려와. 바닷물이 높아져 낮은 곳에 있는 마을이 잠겨. 농사가 잘 안 되는 해가 자주 찾아와."];
+}
+
+/* ---------- 설정 ---------- */
+/* 구글 스프레드시트에 저장하려면 아래 따옴표 안에 주소를 붙여 넣으세요.
+   비워 두면 저장하지 않고 화면에만 보여 줍니다. */
+var SHEET_URL = "https://script.google.com/macros/s/AKfycbxx95QixWNKItDuv7BR5WoHJBDVQAPqGqW_mfl85eFkgzAv7OElOuR4bZZmlL08S-TzYA/exec";
+
+/* ---------- 상태 ---------- */
+var app = document.getElementById("app");
+var picks = [];
+var note5 = "";
+var noteEnd = "";
+var sid = "";
+var order = SCENES.map(function(s){
+  var idx = s.opts.map(function(_,i){return i;});
+  for(var i=idx.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=idx[i]; idx[i]=idx[j]; idx[j]=t; }
+  return idx;
+});
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function bars(n){
+  var h="<div class='bars'>";
+  for(var i=0;i<SCENES.length;i++){ h += "<div class='bar"+(i<n?" on":"")+"'></div>"; }
+  return h+"</div>";
+}
+function goTop(){ window.scrollTo(0,0); }
+function backBtn(){ return "<button class='back' id='bk'>← 이전</button>"; }
+
+/* ---------- 화면 0. 번호 입력 ---------- */
+function screenNumber(){
+  app.innerHTML =
+    "<div class='card center'>" + fairy(96,"happy")
+    + "<h1>안녕! 나는 사이다 요정이야</h1>"
+    + "<p>시작하기 전에 네 번호를 알려 줄래?</p>"
+    + "<input id='sid' type='number' inputmode='numeric' min='1' max='40' placeholder='번호'>"
+    + "<p class='err hid' id='se'>번호를 써 줘</p>"
+    + "<p class='tiny' style='margin-top:10px'>이름은 묻지 않아. 번호만 있으면 돼.</p>"
+    + "<button class='go' id='b'>다음</button></div>";
+  var inp = document.getElementById("sid");
+  if(sid) inp.value = sid;
+  inp.oninput = function(){ document.getElementById("se").classList.add("hid"); };
+  document.getElementById("b").onclick = function(){
+    var v = inp.value.trim();
+    if(!v){ document.getElementById("se").classList.remove("hid"); inp.focus(); return; }
+    sid = v; screenStart();
+  };
+  goTop();
+}
+
+/* ---------- 화면 1. 시작 ---------- */
+function screenStart(){
+  app.innerHTML =
+    "<div class='card center'>" + fairy(96,"happy")
+    + "<h1>" + esc(sid) + "번, 반가워!</h1>"
+    + "<p>오늘 네 하루를 같이 따라가 볼래?</p>"
+    + "<div class='scene' style='text-align:left'><p style='margin:0'><b>정답은 없어.</b> 진짜 네가 한 대로 골라 줘. 그래야 네 하루를 제대로 볼 수 있어.</p></div>"
+    + "<button class='go' id='b'>시작하기</button>"
+    + backBtn() + "</div>";
+  document.getElementById("b").onclick = function(){ screenScene(0); };
+  document.getElementById("bk").onclick = function(){ screenNumber(); };
+  goTop();
+}
+
+/* ---------- 화면 2. 장면 ---------- */
+function screenScene(i){
+  var s = SCENES[i];
+  var h = bars(i) + "<div class='row'><div class='avatar'>"+fairy(46,"happy")+"</div>"
+        + "<div class='bubble'>"+esc(s.ask)+"</div></div>";
+  order[i].forEach(function(oi){
+    var on = (picks[i] === s.opts[oi]) ? " picked" : "";
+    h += "<button class='opt"+on+"' data-o='"+oi+"'>"+esc(s.opts[oi].t)+"</button>";
+  });
+  h += backBtn();
+  app.innerHTML = h;
+  Array.prototype.forEach.call(app.querySelectorAll(".opt"), function(btn){
+    btn.onclick = function(){
+      picks[i] = s.opts[parseInt(btn.getAttribute("data-o"),10)];
+      screenReact(i);
+    };
+  });
+  document.getElementById("bk").onclick = function(){
+    if(i === 0){ screenStart(); } else { screenReact(i-1); }
+  };
+  goTop();
+}
+
+/* ---------- 화면 3. 요정의 반응 ---------- */
+function screenReact(i){
+  var p = picks[i];
+  var h = bars(i+1)
+    + "<div class='row me'><div class='bubble me'>"+esc(p.t)+"</div></div>"
+    + "<div class='row'><div class='avatar'>"+fairy(46,"soft")+"</div>"
+    + "<div class='bubble'>"+esc(p.r)+"</div></div>";
+
+  if(i === 4){
+    h += "<div class='card' style='margin-top:6px'>"
+      + "<p style='margin:0 0 8px'><b>한 줄만 써 줄래?</b><br>교실 불과 에어컨을 끄지 않고 나갔다면, 왜 끄기 어려웠을까?</p>"
+      + "<textarea id='n' placeholder='여기에 써 줘'></textarea>"
+      + "<p class='err hid' id='e'>한 글자라도 써야 넘어갈 수 있어</p>"
+      + "<button class='go' id='b'>다음</button>" + backBtn() + "</div>";
+  } else {
+    h += "<button class='go' id='b'>"+(i===SCENES.length-1 ? "오늘 하루 돌아보기" : "다음")+"</button>" + backBtn();
+  }
+  app.innerHTML = h;
+
+  var ta = document.getElementById("n");
+  if(ta){ ta.value = note5; ta.oninput = function(){ document.getElementById("e").classList.add("hid"); }; }
+
+  document.getElementById("b").onclick = function(){
+    if(ta){
+      if(!ta.value.trim()){ document.getElementById("e").classList.remove("hid"); ta.focus(); return; }
+      note5 = ta.value.trim();
+    }
+    if(i === SCENES.length-1){ screenResult(); } else { screenScene(i+1); }
+  };
+  document.getElementById("bk").onclick = function(){
+    if(ta) note5 = ta.value.trim();
+    screenScene(i);
+  };
+  goTop();
+}
+
+/* ---------- 구글 스프레드시트로 보내기 ---------- */
+function sendToSheet(total, done){
+  if(!SHEET_URL){ done("none"); return; }
+  var data = {
+    번호: sid,
+    총탄소g: total,
+    교실불을못끈까닭: note5,
+    AI를쓸만한이유: noteEnd,
+    선택: picks.map(function(p){ return p.t; }).join(" | ")
+  };
+  try{
+    fetch(SHEET_URL, {
+      method:"POST", mode:"no-cors",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify(data)
+    }).then(function(){ done("ok"); }).catch(function(){ done("fail"); });
+  }catch(err){ done("fail"); }
+}
+
+/* ---------- 화면 4. 결과 ---------- */
+function screenResult(){
+  var total = picks.reduce(function(a,p){ return a + p.g; }, 0);
+  var trees = Math.max(1, Math.round(total/60));
+  var yearKg = Math.round(total*365/1000);
+  var addTemp = total*0.00010512;
+  var finalTemp = 1.3 + addTemp;
+  var fs = futureScene(finalTemp);
+  var maxAll = SCENES.reduce(function(a,s){ return a + Math.max.apply(null, s.opts.map(function(o){return o.g;})); }, 0);
+  var pct = Math.min(100, Math.round(total/maxAll*100));
+  var most = picks.slice().sort(function(a,b){ return b.g-a.g; })[0];
+
+  var list = "";
+  picks.forEach(function(p){
+    list += "<div class='item'><span>"+esc(p.t)+"</span>"
+         + "<span class='g"+(p.g===0?" zero":"")+"'>"+p.g+" g</span></div>";
+  });
+
+  var bottle =
+    "<svg width='84' height='128' viewBox='0 0 46 70' aria-hidden='true' style='display:block;margin:0 auto 8px'>"
+    + "<rect x='16' y='2' width='14' height='10' rx='3' fill='#B4B2A9'/>"
+    + "<path d='M9 16 Q9 13 16 13 L30 13 Q37 13 37 16 L37 63 Q37 68 32 68 L14 68 Q9 68 9 63 Z' fill='#F1EFE8'/>"
+    + "<clipPath id='cp'><path d='M9 16 Q9 13 16 13 L30 13 Q37 13 37 16 L37 63 Q37 68 32 68 L14 68 Q9 68 9 63 Z'/></clipPath>"
+    + "<rect id='fillRect' class='fill' clip-path='url(#cp)' x='9' y='68' width='28' height='0' fill='#F0997B'/>"
+    + "</svg>";
+
+  app.innerHTML =
+    "<div class='card center'>"
+      + bottle
+      + "<p class='muted' style='margin:0'>오늘 네가 남긴 탄소발자국</p>"
+      + "<p class='big'>약 "+total.toLocaleString()+" g</p>"
+      + "<p style='margin:0 0 6px'>나무 <b>"+trees+"</b>그루가 하루 동안 마시는 양이야</p>"
+      + "<p class='tiny'>네가 고른 아홉 가지만 어림해서 더한 숫자예요.<br>네 하루에는 이것 말고도 더 많은 일이 있어요.</p>"
+    + "</div>"
+
+    + "<div class='card' style='margin-top:12px'>"
+      + "<p class='muted' style='margin:0 0 6px'>만약 매일 이렇게 지낸다면</p>"
+      + "<p style='margin:0 0 10px'>1년이면 약 <b>"+yearKg+" kg</b>이 나와.<br>전 세계 사람들이 평생 너처럼 지낸다면 지구의 온도가 <b style='color:#993C1D'>약 "+addTemp.toFixed(2)+"도</b> 더 올라가.</p>"
+      + "<div class='warn'><strong>이 온도는 0도에서 올라가는 게 아니야!<br>이미 올라간 1.3도 위에 더해지는 거야.</strong>"
+      + "<p style='margin:8px 0 0; font-size:15px; color:#501313'>1.3도 + "+addTemp.toFixed(2)+"도 = <b>약 "+finalTemp.toFixed(2)+"도</b></p></div>"
+      + "<div class='scene'><p style='margin:0 0 6px'><b>"+esc(fs[0])+"</b></p><p style='margin:0'>"+esc(fs[1])+"</p></div>"
+    + "</div>"
+
+    + "<div class='card' style='margin-top:12px'>"
+      + "<p class='muted' style='margin:0 0 8px'>네가 고른 아홉 가지</p>" + list
+      + "<p class='tiny' style='margin-top:10px'>가장 많이 나온 것: <b>"+esc(most.t)+"</b></p>"
+    + "</div>"
+
+    + "<div class='card' style='margin-top:12px'>"
+      + "<div class='row'><div class='avatar'>"+fairy(46,"soft")+"</div>"
+      + "<div class='bubble' style='background:var(--lemon); border:1.5px solid var(--lemon-line); color:var(--lemon-dark); max-width:100%'>"
+      + "그런데 말이야, 너랑 이렇게 이야기하는 데에도 전기가 들어. 나를 쓰는 것도 탄소발자국이 남는단다. 그래도 나를 쓸 만한 이유는 뭘까?</div></div>"
+      + "<textarea id='ne' placeholder='여기에 네 생각을 써 줘'></textarea>"
+      + "<p class='err hid' id='ee'>한 글자라도 써야 넘어갈 수 있어</p>"
+      + "<button class='go' id='bd'>다 썼어</button>" + backBtn()
+    + "</div>";
+
+  var r = document.getElementById("fillRect");
+  setTimeout(function(){ var hh = 52*pct/100; r.setAttribute("y", String(68-hh)); r.setAttribute("height", String(hh)); }, 120);
+
+  var t2 = document.getElementById("ne");
+  t2.value = noteEnd;
+  t2.oninput = function(){ document.getElementById("ee").classList.add("hid"); };
+  document.getElementById("bd").onclick = function(){
+    if(!t2.value.trim()){ document.getElementById("ee").classList.remove("hid"); t2.focus(); return; }
+    noteEnd = t2.value.trim();
+    var btn = document.getElementById("bd");
+    btn.disabled = true; btn.textContent = "보내는 중…";
+    sendToSheet(total, function(state){
+      screenEnd(total, trees, addTemp, finalTemp, most, state);
+    });
+  };
+  document.getElementById("bk").onclick = function(){
+    noteEnd = t2.value.trim();
+    screenReact(SCENES.length-1);
+  };
+  goTop();
+}
+
+/* ---------- 화면 5. 배움공책에 옮겨 적기 ---------- */
+function screenEnd(total, trees, addTemp, finalTemp, most, state){
+  var msg = "";
+  if(state === "ok")   msg = "<p class='tiny' style='margin:0'>선생님께 잘 전달했어!</p>";
+  if(state === "fail") msg = "<p class='err' style='margin:0'>전달하지 못했어. 아래 내용을 배움공책에 꼭 적어 줘.</p>";
+
+  app.innerHTML =
+    "<div class='card center'>" + fairy(80,"happy")
+    + "<h1>고마워, " + esc(sid) + "번!</h1>"
+    + "<p class='muted' style='margin:0 0 4px'>아래 내용을 배움공책에 옮겨 적어 줘</p>" + msg + "</div>"
+
+    + "<div class='card' style='margin-top:12px'>"
+      + "<div class='item'><span>오늘 남긴 탄소</span><span class='g'>약 "+total.toLocaleString()+" g</span></div>"
+      + "<div class='item'><span>나무로 세면</span><span class='g'>"+trees+" 그루</span></div>"
+      + "<div class='item'><span>지구 온도에 더해지는 양</span><span class='g'>약 "+addTemp.toFixed(2)+"도</span></div>"
+      + "<div class='item'><span>1.3도에 더하면</span><span class='g'>약 "+finalTemp.toFixed(2)+"도</span></div>"
+      + "<div class='item'><span>가장 많이 나온 것</span><span>"+esc(most.t)+"</span></div>"
+    + "</div>"
+
+    + "<div class='card' style='margin-top:12px'>"
+      + "<p class='muted' style='margin:0 0 6px'>교실 불과 에어컨을 끄기 어려웠던 까닭</p>"
+      + "<p style='margin:0 0 14px'>"+esc(note5)+"</p>"
+      + "<p class='muted' style='margin:0 0 6px'>사이다 요정을 쓸 만한 이유</p>"
+      + "<p style='margin:0'>"+esc(noteEnd)+"</p>"
+    + "</div>"
+
+    + "<button class='go' id='again' style='margin-top:14px'>처음부터 다시 하기</button>";
+
+  document.getElementById("again").onclick = function(){
+    picks = []; note5 = ""; noteEnd = ""; sid = ""; screenNumber();
+  };
+  goTop();
+}
+
+screenNumber();
+
+</script>
+</body>
+</html>
